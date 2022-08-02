@@ -20,16 +20,16 @@ var Config = async function(accounts) {
     ];
 
 
-    let owner = accounts[0];
-    let firstAirline = accounts[1];
+    let contractOwnerAddress = accounts[0];
+    let firstAirlineAddress = accounts[1];
 
-    let flightSuretyData = await FlightSuretyData.new();
-    let flightSuretyApp = await FlightSuretyApp.new();
+    let flightSuretyData = await FlightSuretyData.deployed(firstAirlineAddress, {from: contractOwnerAddress});
+    let flightSuretyApp = await FlightSuretyApp.deployed(flightSuretyData.address, {from: contractOwnerAddress});
 
     
     return {
-        owner: owner,
-        firstAirline: firstAirline,
+        owner: contractOwnerAddress,
+        firstAirline: firstAirlineAddress,
         weiMultiple: (new BigNumber(10)).pow(18),
         testAddresses: testAddresses,
         flightSuretyData: flightSuretyData,
