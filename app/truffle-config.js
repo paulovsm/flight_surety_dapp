@@ -41,12 +41,14 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    development: {
+    develop: {
       provider: function() {
         return new HDWalletProvider(mnemonic, "http://127.0.0.1:8545/", 0, 50);
       },
       network_id: '*',
-      gas: 9999999
+      gas: 9999999,
+      accounts: 20,
+      defaultEtherBalance: 500,
     },
     //
     // An additional network, but with some advanced options…
