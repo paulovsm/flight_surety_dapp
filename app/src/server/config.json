@@ -3,7 +3,7 @@
 		"url": "http://localhost:9545",
 		"contractOwner": "0x3F23590961239A94ba640DB385Ce87cc9CbBd494",
 		"firstAirline": "0x0D97E3849AC2B960A86B8F48CD0bA891F0a6569B",
-		"dataAddress": "0xd1275185A1c6890CF6312fD54438eE8d1c1A6D57",
-		"appAddress": "0x1CCDe7836DE2C6b26C3c406db0D6f35533ccAbdb"
+		"dataAddress": "0x1df6E39B69b80787A82B10D2eEb4c47fC834d292",
+		"appAddress": "0xcB61dac6b05b958673e805C36905424622b8d3BD"
 	}
 }
