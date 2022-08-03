@@ -48,10 +48,6 @@ contract FlightSuretyData {
 
     bool locked = false; //Reentrance control flag
 
-    /********************************************************************************************/
-    /*                                       EVENT DEFINITIONS                                  */
-    /********************************************************************************************/
-
     /**
      * @dev Constructor
      *      The deploying account becomes contractOwner
@@ -63,6 +59,17 @@ contract FlightSuretyData {
         airlines[firstAirlineAddress] = Airline(firstAirlineAddress, 0);
         numAirlines++;
     }
+
+    /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+
+    event AirlineRegistered(address airline);
+    event AirlineFunded(address airline);
+    event FlightRegistered(bytes32 flightKey);
+    event PassengerInsured(bytes32 flightKey, address passenger, uint256 insuranceValue);
+    event InsureeCredited(bytes32 flightKey, address passenger, uint256 amount);
+    event PayInsuree(address payoutAddress, uint256 amount);
 
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -175,6 +182,8 @@ contract FlightSuretyData {
     {
         airlines[newAirline] = Airline(newAirline, 0);
         numAirlines++;
+
+        emit AirlineRegistered(newAirline);
     }
 
     function getAirline(address airlineAddress)
@@ -217,6 +226,8 @@ contract FlightSuretyData {
 
         Flight storage flight = flights[flightId];
         flight.passengersSize++;
+
+        emit PassengerInsured(flightKey, passenger, insuranceValue);
 
         return flightKey;
     }
@@ -273,6 +284,8 @@ contract FlightSuretyData {
             passenger.payoutCredit =
                 passenger.insuranceValue +
                 (passenger.insuranceValue / 2);
+
+                emit InsureeCredited(flightKey, passenger.passengerAddress, passenger.payoutCredit);
         }
     }
 
@@ -306,6 +319,8 @@ contract FlightSuretyData {
             uint256 payoutCredit = passenger.payoutCredit;
             passenger.payoutCredit = 0;
             _passenger.transfer(payoutCredit);
+
+            emit PayInsuree(passenger.passengerAddress, payoutCredit);
         }
 
         locked = false;
@@ -323,6 +338,8 @@ contract FlightSuretyData {
     {
         Airline storage airline = airlines[airlineAddress];
         airline.funding = funding;
+
+        emit AirlineFunded(airlineAddress);
     }
 
     function registerFlight(
@@ -341,6 +358,8 @@ contract FlightSuretyData {
         flight.flightId = flightId;
         flight.timestamp = timestamp;
         flight.passengersSize = 0;
+
+        emit FlightRegistered(bytes32(bytes(flightId)));
     }
 
     function flightExists(string calldata flightId) public view returns (bool) {

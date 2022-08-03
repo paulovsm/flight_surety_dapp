@@ -168,6 +168,7 @@ contract FlightSuretyApp {
         bytes32 key = keccak256(
             abi.encodePacked(index, airline, flight, timestamp)
         );
+
         ResponseInfo storage response = oracleResponses[key];
         response.requester = msg.sender;
         response.isOpen = true;
@@ -253,6 +254,8 @@ contract FlightSuretyApp {
         uint8 status
     );
 
+    event OracleRegistered(address oracle);
+
     // Event fired when flight status request is submitted
     // Oracles track this and if they have a matching index
     // they fetch data and submit a response
@@ -271,6 +274,8 @@ contract FlightSuretyApp {
         uint8[3] memory indexes = generateIndexes(msg.sender);
 
         oracles[msg.sender] = Oracle({isRegistered: true, indexes: indexes});
+
+        emit OracleRegistered(msg.sender);
     }
 
     function getMyIndexes() external view returns (uint8[3] memory) {
