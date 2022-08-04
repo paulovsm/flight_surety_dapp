@@ -26,7 +26,7 @@ async function registerOracles() {
       from: accts[i],
       value: fee
     });
-    
+
     await flightSuretyApp.methods.registerOracle().send({
       from: accts[i],
       value: fee,
@@ -43,9 +43,12 @@ async function submitOracleResponse(airline, flight, timestamp) {
     var indexes = await flightSuretyApp.methods.getMyIndexes().call({ from: oracles[i] });
     for (var j = 0; j < indexes.length; j++) {
       try {
-        await flightSuretyApp.methods.submitOracleResponse(
-          indexes[j], airline, flight, timestamp, statusCode
-        ).send({ from: oracles[i], gas: 90000000 });
+        let gasAmount = await flightSuretyApp.methods.submitOracleResponse(indexes[j], airline, flight, timestamp, statusCode)
+          .estimateGas({ from: oracles[i] });
+
+        await flightSuretyApp.methods.submitOracleResponse(indexes[j], airline, flight, timestamp, statusCode)
+          .send({ from: oracles[i], gas: gasAmount });
+
       } catch (e) {
         console.log(e.message);
       }
