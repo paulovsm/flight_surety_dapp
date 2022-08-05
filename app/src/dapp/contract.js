@@ -7,7 +7,7 @@ export default class Contract {
     constructor(network, callback) {
 
         let config = Config[network];
-        this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
+        this.web3 = new Web3(new Web3.providers.WebsocketProvider(config.url.replace('http', 'ws')));
         this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
         this.flightSuretyData = new this.web3.eth.Contract(FlightSuretyData.abi, config.dataAddress);
 
@@ -50,7 +50,7 @@ export default class Contract {
                 })
                 .on('changed', changed => console.log(changed))
                 .on('error', err => console.log("ERROR:", err))
-                .on('connected', str => console.log(str))
+                .on('connected', str => console.log("EVENT LISTENER: " + str))
 
             var select = document.getElementById("selectPassenger");
             this.createSelectMenu(this.passengers, "selectPassenger");
@@ -71,9 +71,15 @@ export default class Contract {
 
     setOperatingStatus(status, callback) {
         let self = this;
-        self.flightSuretyApp.methods
-            .setOperatingStatus(status, this.owner)
-            .send({ from: self.owner }, callback);
+
+        try {
+            self.flightSuretyApp.methods
+                .setOperatingStatus(status)
+                .send({ from: self.owner }, callback);
+        } catch (error) {
+            console.log(error)
+        }
+
     }
 
     fetchFlightStatus(airline, flight, timestamp, callback) {
@@ -102,13 +108,13 @@ export default class Contract {
         let minFunding = "10";
         let self = this;
 
-        firstAirline = await self.flightSuretyData.methods.getAirline(airlineAddress).call({ from: self.owner });
+        let firstAirline = await self.flightSuretyData.methods.getAirline(airlineAddress).call({ from: self.owner });
         console.log("firstAirline", firstAirline.airlineAddress, "funding =", this.web3.utils.fromWei(firstAirline.funding), "ETH");
 
         if (firstAirline.funding < this.web3.utils.toWei(minFunding, "ether")) {
 
-            let gasAmount =  await self.flightSuretyApp.methods.fund(firstAirline.airlineAddress)
-              .estimateGas({ from: firstAirline.airlineAddress, value: this.web3.utils.toWei(minFunding, "ether") });
+            let gasAmount = await self.flightSuretyApp.methods.fund(firstAirline.airlineAddress)
+                .estimateGas({ from: firstAirline.airlineAddress, value: this.web3.utils.toWei(minFunding, "ether") });
 
             await self.flightSuretyApp.methods.fund(firstAirline.airlineAddress)
                 .send({ from: firstAirline.airlineAddress, gas: gasAmount, value: this.web3.utils.toWei(minFunding, "ether") });
@@ -125,22 +131,30 @@ export default class Contract {
 
     async registerFlights(airline) {
         let self = this;
-        let ts101 = new Date(2022, 08, 04, 10, 30);
-        let ts102 = new Date(2022, 08, 04, 11, 30);
-        let ts103 = new Date(2022, 08, 04, 12, 30);
+        let ts101 = new Date(2022, 8, 4, 10, 30);
+        let ts102 = new Date(2022, 8, 4, 11, 30);
+        let ts103 = new Date(2022, 8, 4, 12, 30);
 
-        await self.flightSuretyApp.methods.registerFlight(airline, "101", ts101.getTime()).call({ from: self.owner });
-        this.flights[101] = { airline: airline, flight: "101", timestamp: ts101.getTime(), status: 0 };
-        console.log("registerFlight", airline, "101", ts101.getTime());
+        let encondedTimestamp101 = this.web3.eth.abi.encodeParameter('uint256', ts101.getTime());
+        await self.flightSuretyApp.methods.registerFlight(airline, "101", encondedTimestamp101).send({ from: self.owner });
 
-        await self.flightSuretyApp.methods.registerFlight(airline, "102", ts102.getTime()).call({ from: self.owner })
-        this.flights[102] = { airline: airline, flight: "102", timestamp: ts102.getTime(), status: 0 };
-        console.log("registerFlight", airline, "102", ts102.getTime());
+        let flight101 = await self.flightSuretyData.methods.getFlight("101").call({ from: self.owner });
+        this.flights[101] = { airline: airline, flight: "101", timestamp: encondedTimestamp101, status: 0 };
+        console.log("registerFlight", flight101.airline, flight101.flightId, flight101.timestamp);
 
+        let encondedTimestamp102 = this.web3.eth.abi.encodeParameter('uint256', ts102.getTime());
+        await self.flightSuretyApp.methods.registerFlight(airline, "102", encondedTimestamp102).send({ from: self.owner })
 
-        await self.flightSuretyApp.methods.registerFlight(airline, "103", ts103.getTime()).call({ from: self.owner })
-        this.flights[103] = { airline: airline, flight: "103", timestamp: ts103.getTime(), status: 0 };
-        console.log("registerFlight", airline, "103", ts103.getTime());
+        let flight102 = await self.flightSuretyData.methods.getFlight("102").call({ from: self.owner });
+        this.flights[102] = { airline: airline, flight: "102", timestamp: encondedTimestamp102, status: 0 };
+        console.log("registerFlight", flight102.airline, flight102.flightId, flight102.timestamp);
+
+        let encondedTimestamp103 = this.web3.eth.abi.encodeParameter('uint256', ts103.getTime());
+        await self.flightSuretyApp.methods.registerFlight(airline, "103", encondedTimestamp103).send({ from: self.owner })
+
+        let flight103 = await self.flightSuretyData.methods.getFlight("103").call({ from: self.owner });
+        this.flights[103] = { airline: airline, flight: "103", timestamp: encondedTimestamp103, status: 0 };
+        console.log("registerFlight", flight103.airline, flight103.flightId, flight103.timestamp);
 
         let flightIds = Object.keys(this.flights);
         this.createSelectMenu(flightIds, "selectFlight");
@@ -164,7 +178,7 @@ export default class Contract {
 
     getPassengerInsuranceValue(passenger, callback) {
         let self = this;
-        console.log(".getPassenger(passenger)", passenger);
+        console.log("Get Passenger Insurance", passenger);
 
         self.flightSuretyData.methods
             .getPassenger(passenger)
@@ -185,8 +199,10 @@ export default class Contract {
         let txResult = await self.flightSuretyApp.methods.buy(passenger, airline, flightId, timestamp,)
             .send({ from: passenger, gas: gasAmount, value: this.web3.utils.toWei(insuranceAmount, "ether") });
 
-        let tx = await this.web3.eth.getTransaction(txResult.tx);
-        console.log(tx);
+        let tx = await this.web3.eth.getTransaction(txResult.transactionHash);
+        console.log("Buy Insurance tx", tx);
+
+        callback(null, { flight: flightId, timestamp: timestamp });
 
     }
 
@@ -195,11 +211,12 @@ export default class Contract {
 
         console.log("Withdraw Credit", passenger, passenger);
 
-        balanceDue = await self.flightSuretyApp.methods.getBalanceDue(passenger).call({ from: self.owner });
+        let balanceDue = await self.flightSuretyApp.methods.getBalanceDue(passenger).call({ from: self.owner });
 
         let txResult = await self.flightSuretyApp.methods.pay(passenger).send({ from: self.owner, value: balanceDue.toString(10) });
 
-        let tx = await this.web3.eth.getTransaction(txResult.tx);
+        let tx = await this.web3.eth.getTransaction(txResult.transactionHash);
+        
         console.log(tx);
     }
 

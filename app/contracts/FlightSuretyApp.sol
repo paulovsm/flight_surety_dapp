@@ -91,8 +91,8 @@ contract FlightSuretyApp {
         return flightSuretyData.isOperational(); // Modify to call data contract's status
     }
 
-    function setOperatingStatus(bool mode, address sender) external {
-        flightSuretyData.setOperatingStatus(mode, sender);
+    function setOperatingStatus(bool mode) external requireContractOwner {
+        flightSuretyData.setOperatingStatus(mode);
     }
 
     function getDataContractAddress() public view returns (address) {
@@ -127,7 +127,7 @@ contract FlightSuretyApp {
         address airline,
         string calldata flightId,
         uint256 timestamp
-    ) external {
+    ) public {
         flightSuretyData.registerFlight(airline, flightId, timestamp);
     }
 
@@ -384,7 +384,7 @@ contract FlightSuretyDataAbstract {
     // function setContractOwner(address owner) public {}
     function isOperational() public view returns (bool) {}
 
-    function setOperatingStatus(bool mode, address sender) external {}
+    function setOperatingStatus(bool mode) external {}
 
     function registerAirline() external {}
 

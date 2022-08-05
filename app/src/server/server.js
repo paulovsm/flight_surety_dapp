@@ -19,28 +19,45 @@ async function registerOracles() {
   let accts = await accounts;
   let numberOfOracles = 40;
 
+
   for (var i = 30; i < numberOfOracles; i++) {
-    oracles.push(accts[i]);
+    try {
 
-    let gasAmount = await flightSuretyApp.methods.registerOracle().estimateGas({
-      from: accts[i],
-      value: fee
-    });
+      let gasAmount = await flightSuretyApp.methods.registerOracle().estimateGas({
+        from: accts[i],
+        value: fee
+      });
 
-    await flightSuretyApp.methods.registerOracle().send({
-      from: accts[i],
-      value: fee,
-      gas: gasAmount
-    });
+      await flightSuretyApp.methods.registerOracle().send({
+        from: accts[i],
+        value: fee,
+        gas: gasAmount
+      });
+
+      oracles.push(accts[i]);
+
+    } catch (error) {
+      console.log(error.message);
+    }
 
     await sleep(2000)
   }
+
+
 }
 
 async function submitOracleResponse(airline, flight, timestamp) {
   for (var i = 0; i < oracles.length; i++) {
     var statusCode = (Math.floor(Math.random() * Math.floor(4)) + 1) * 10 + 10;
-    var indexes = await flightSuretyApp.methods.getMyIndexes().call({ from: oracles[i] });
+    var indexes = [];
+
+    try {
+      indexes = await flightSuretyApp.methods.getMyIndexes().call({ from: oracles[i] });
+    } catch (error) {
+      console.log(error.message);
+    }
+
+
     for (var j = 0; j < indexes.length; j++) {
       try {
         let gasAmount = await flightSuretyApp.methods.submitOracleResponse(indexes[j], airline, flight, timestamp, statusCode)
@@ -53,6 +70,7 @@ async function submitOracleResponse(airline, flight, timestamp) {
         console.log(e.message);
       }
     }
+
   }
 }
 
@@ -127,6 +145,89 @@ function sleep(ms) {
     setTimeout(resolve, ms);
   });
 }
+
+async function isOperational() {
+  let accts = await accounts;
+
+  let status = await flightSuretyApp.methods
+    .isOperational()
+    .call({ from: accts[0] });
+
+  return status;
+}
+
+async function setOperatingStatus(status) {
+  let accts = await accounts;
+
+  try {
+
+    await flightSuretyApp.methods
+      .setOperatingStatus(status)
+      .send({ from: accts[0] });
+
+    console.log(await isOperational());
+
+    await registerFlight();
+
+  } catch (error) {
+    console.log(error)
+  }
+
+}
+
+async function registerFlight() {
+  let accts = await accounts;
+
+  try {
+
+    await fundAirline(accts[1]);
+
+    await flightSuretyData.methods
+      .registerFlight(accts[1], "101", 0)
+      .send({ from: accts[0] });
+
+    let flight101 = await flightSuretyData.methods.getFlight("101")
+      .call({ from: accts[0] });
+
+    console.log(flight101);
+
+    await flightSuretyData.methods
+      .registerFlight(accts[1], "102", 0)
+      .send({ from: accts[0] });
+
+    let flight102 = await flightSuretyData.methods.getFlight("102")
+      .call({ from: accts[0] });
+
+    console.log(flight102);
+
+    await flightSuretyData.methods
+      .registerFlight(accts[1], "103", 0)
+      .send({ from: accts[0] });
+
+    let flight103 = await flightSuretyData.methods.getFlight("103")
+      .call({ from: accts[0] });
+
+    console.log(flight103);
+
+
+  } catch (error) {
+    console.log(error)
+  }
+
+}
+
+async function fundAirline(airline) {
+  let minFunding = "10";
+
+  let gasAmount = await flightSuretyApp.methods.fund(airline)
+    .estimateGas({ from: airline, value: web3.utils.toWei(minFunding, "ether") });
+
+  await flightSuretyApp.methods.fund(airline)
+    .send({ from: airline, gas: gasAmount, value: web3.utils.toWei(minFunding, "ether") });
+}
+
+setOperatingStatus(true);
+setOperatingStatus(false);
 
 registerOracles();
 listenForEvents();

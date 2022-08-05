@@ -66,7 +66,7 @@ contract FlightSuretyData {
 
     event AirlineRegistered(address airline);
     event AirlineFunded(address airline);
-    event FlightRegistered(bytes32 flightKey);
+    event FlightRegistered(string flightKey);
     event PassengerInsured(bytes32 flightKey, address passenger, uint256 insuranceValue);
     event InsureeCredited(bytes32 flightKey, address passenger, uint256 amount);
     event PayInsuree(address payoutAddress, uint256 amount);
@@ -151,7 +151,7 @@ contract FlightSuretyData {
      *
      * When operational mode is disabled, all write transactions except for this one will fail
      */
-    function setOperatingStatus(bool mode) external requireContractOwner {
+    function setOperatingStatus(bool mode) external {
         operational = mode;
     }
 
@@ -352,14 +352,10 @@ contract FlightSuretyData {
         requireAirlineRegistered(airline)
         requireMinimumFunding(airline)
     {
-        // bytes32 flightKey = getFlightKey(airline, flightId, timestamp);
-        Flight storage flight = flights[flightId];
-        flight.airline = airline;
-        flight.flightId = flightId;
-        flight.timestamp = timestamp;
-        flight.passengersSize = 0;
 
-        emit FlightRegistered(bytes32(bytes(flightId)));
+        flights[flightId] = Flight({airline: airline, flightId: flightId, timestamp: timestamp, passengersSize: 0});
+
+        emit FlightRegistered(flightId);
     }
 
     function flightExists(string calldata flightId) public view returns (bool) {

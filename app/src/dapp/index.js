@@ -22,7 +22,7 @@ let STATUS_CODES = {
 
     let contract = new Contract('localhost', () => {
 
-        operatingStatus = checkOperatingStatus(contract);
+        checkOperatingStatus(contract);
 
         // User-submitted transaction
         DOM.elid('submit-oracle').addEventListener('click', () => {
@@ -100,6 +100,9 @@ let STATUS_CODES = {
 
             contract.getPassengerInsuranceValue(passengerAddress, (error, result) => {
                 console.log(error, result);
+
+                displayPassengerPayout('Passanger Insurance', 'Details', 
+                    [{ label: 'Insurance Value - Payout Credit', error: error, value: result.insuranceValue + ' ' + result.payoutCredit }]);
             });
         })
 
@@ -164,6 +167,10 @@ function displayOracles(title, description, results) {
 
 function displayOracleResponse(title, description, results) {
     display("oracles-response-wrapper", title, description, results);
+}
+
+function displayPassengerPayout(title, description, results) {
+    display("payout-display-wrapper", title, description, results);
 }
 
 
